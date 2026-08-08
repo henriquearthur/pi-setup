@@ -9,3 +9,6 @@ models-store.json
 trust.json
 sessions/
 bin/
+
+# Extension dependencies (npm install per machine)
+node_modules/
