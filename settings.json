@@ -1,0 +1,17 @@
+{
+  "lastChangelogVersion": "0.84.1",
+  "theme": "dark",
+  "defaultProvider": "kimi-k3",
+  "defaultModel": "kimi-k3",
+  "defaultThinkingLevel": "high",
+  "hideThinkingBlock": true,
+  "markdown": {
+    "mermaid": "streaming"
+  },
+  "showCacheMissNotices": true,
+  "collapseChangelog": true,
+  "enableInstallTelemetry": true,
+  "defaultProjectTrust": "always",
+  "treeFilterMode": "all",
+  "tuiMode": "fullscreen"
+}

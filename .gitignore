@@ -1,0 +1,11 @@
+# Credentials
+auth.json
+models.json
+
+# Cached model catalogue (may embed provider keys)
+models-store.json
+
+# Machine-specific state
+trust.json
+sessions/
+bin/

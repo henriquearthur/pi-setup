@@ -1,0 +1,26 @@
+{
+  "providers": {
+    "kimi-k3": {
+      "baseUrl": "https://hnrq-art--ep-kimi-k3-server.us-west.modal.direct/v1",
+      "api": "openai-completions",
+      "apiKey": "REDACTED",
+      "authHeader": true,
+      "models": [
+        {
+          "id": "kimi-k3",
+          "name": "Kimi K3",
+          "reasoning": true,
+          "input": ["text"],
+          "contextWindow": 131072,
+          "maxTokens": 32768,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          }
+        }
+      ]
+    }
+  }
+}
