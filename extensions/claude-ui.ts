@@ -56,10 +56,9 @@ type ThemeLike = {
 
 /** `⏺ ToolName(detail)` */
 function header(theme: ThemeLike, label: string, detail?: string): Text {
-	const bullet = theme.fg("accent", BULLET);
-	const name = theme.bold(label);
-	const text = detail ? `${bullet} ${name}(${truncate(detail, 120)})` : `${bullet} ${name}`;
-	return new Text(text, 0, 0);
+	const bullet = theme.fg("dim", BULLET);
+	const call = detail ? `${theme.bold(label)}(${truncate(detail, 120)})` : theme.bold(label);
+	return new Text(`${bullet} ${theme.fg("toolTitle", call)}`, 0, 0);
 }
 
 /** keyHint() needs an initialized theme; degrade gracefully. */

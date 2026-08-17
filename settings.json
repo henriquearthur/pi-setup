@@ -1,9 +1,9 @@
 {
   "lastChangelogVersion": "0.84.2",
-  "theme": "dark",
-  "defaultProvider": "kimi-k3",
+  "theme": "github-dark",
+  "defaultProvider": "opencode-go",
   "defaultModel": "kimi-k3",
-  "defaultThinkingLevel": "high",
+  "defaultThinkingLevel": "max",
   "hideThinkingBlock": true,
   "markdown": {
     "mermaid": "streaming"
@@ -13,5 +13,6 @@
   "enableInstallTelemetry": true,
   "defaultProjectTrust": "always",
   "treeFilterMode": "all",
-  "tuiMode": "fullscreen"
+  "tuiMode": "regular",
+  "fullscreenExitOutput": "transcript"
 }

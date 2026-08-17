@@ -15,6 +15,7 @@ import type {
   ExtensionAPI,
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
+import { keyHint } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Cause, Data, Effect, Exit } from "effect";
 import { Type } from "typebox";
@@ -102,6 +103,32 @@ export interface RgToolDetails {
 }
 
 const EXEC_TIMEOUT_MS = 60_000;
+const TOOL_BULLET = "⏺";
+const RESULT_HOOK = "⎿";
+const RESULT_INDENT = "    ";
+
+interface ThemeLike {
+  fg(color: string, text: string): string;
+}
+
+function toolCallPrefix(theme: ThemeLike) {
+  return `${theme.fg("dim", TOOL_BULLET)} `;
+}
+
+function toolResultPrefix(theme: ThemeLike) {
+  return `${theme.fg("dim", `  ${RESULT_HOOK}`)}  `;
+}
+
+/** keyHint() needs an initialized theme; degrade gracefully. */
+function expandHint(theme: ThemeLike) {
+  let hint: string;
+  try {
+    hint = keyHint("app.tools.expand", "to expand");
+  } catch {
+    hint = "ctrl+o to expand";
+  }
+  return theme.fg("dim", ` (${hint})`);
+}
 
 function causeMessage<E>(cause: Cause.Cause<E>) {
   const [first] = Cause.prettyErrors(cause);
@@ -214,6 +241,7 @@ export default function fileSearchTools(pi: ExtensionAPI) {
     promptSnippet: FD_PROMPT_SNIPPET,
     promptGuidelines: FD_PROMPT_GUIDELINES,
     parameters: fdParameters(),
+    renderShell: "self",
 
     async execute(_toolCallId, params, signal, _onUpdate, ctx) {
       const exit = await Effect.runPromiseExit(
@@ -247,7 +275,8 @@ export default function fileSearchTools(pi: ExtensionAPI) {
     },
 
     renderCall(args, theme) {
-      let text = theme.fg("toolTitle", theme.bold("fd "));
+      let text = toolCallPrefix(theme);
+      text += theme.fg("toolTitle", theme.bold("fd "));
       text += theme.fg("accent", args.pattern ? `"${args.pattern}"` : "(all)");
       if (args.path) text += theme.fg("muted", ` in ${args.path}`);
       const flags = [
@@ -262,18 +291,23 @@ export default function fileSearchTools(pi: ExtensionAPI) {
     },
 
     renderResult(result, { expanded, isPartial }, theme) {
-      if (isPartial) return new Text(theme.fg("warning", "Searching..."), 0, 0);
+      if (isPartial) {
+        return new Text(toolResultPrefix(theme) + theme.fg("warning", "Searching..."), 0, 0);
+      }
       const details = result.details;
       if (!details || details.matchCount === 0) {
-        return new Text(theme.fg("dim", "No files found"), 0, 0);
+        return new Text(toolResultPrefix(theme) + theme.fg("dim", "No files found"), 0, 0);
       }
-      let text = theme.fg(
+      let text = toolResultPrefix(theme) + theme.fg(
         "success",
         `${details.matchCount} ${details.matchCount === 1 ? "entry" : "entries"}`,
       );
       if (details.truncated) text += theme.fg("warning", " (truncated)");
-      if (expanded)
+      if (expanded) {
         text += expandedPreview(result, details.fullOutputPath, theme);
+      } else {
+        text += expandHint(theme);
+      }
       return new Text(text, 0, 0);
     },
   });
@@ -285,6 +319,7 @@ export default function fileSearchTools(pi: ExtensionAPI) {
     promptSnippet: RG_PROMPT_SNIPPET,
     promptGuidelines: RG_PROMPT_GUIDELINES,
     parameters: rgParameters(),
+    renderShell: "self",
 
     async execute(_toolCallId, params, signal, _onUpdate, ctx) {
       const exit = await Effect.runPromiseExit(
@@ -318,7 +353,8 @@ export default function fileSearchTools(pi: ExtensionAPI) {
     },
 
     renderCall(args, theme) {
-      let text = theme.fg("toolTitle", theme.bold("rg "));
+      let text = toolCallPrefix(theme);
+      text += theme.fg("toolTitle", theme.bold("rg "));
       text += theme.fg("accent", `"${args.pattern}"`);
       if (args.path) text += theme.fg("muted", ` in ${args.path}`);
       const flags = [
@@ -333,28 +369,29 @@ export default function fileSearchTools(pi: ExtensionAPI) {
     },
 
     renderResult(result, { expanded, isPartial }, theme) {
-      if (isPartial) return new Text(theme.fg("warning", "Searching..."), 0, 0);
+      if (isPartial) {
+        return new Text(toolResultPrefix(theme) + theme.fg("warning", "Searching..."), 0, 0);
+      }
       const details = result.details;
       if (!details || details.outputLines === 0) {
-        return new Text(theme.fg("dim", "No matches found"), 0, 0);
+        return new Text(toolResultPrefix(theme) + theme.fg("dim", "No matches found"), 0, 0);
       }
-      let text = theme.fg(
+      let text = toolResultPrefix(theme) + theme.fg(
         "success",
         `${details.outputLines} output ${details.outputLines === 1 ? "line" : "lines"}`,
       );
       if (details.truncated) text += theme.fg("warning", " (truncated)");
-      if (expanded)
+      if (expanded) {
         text += expandedPreview(result, details.fullOutputPath, theme);
+      } else {
+        text += expandHint(theme);
+      }
       return new Text(text, 0, 0);
     },
   });
 }
 
 const PREVIEW_LINES = 20;
-
-interface ThemeLike {
-  fg(color: string, text: string): string;
-}
 
 function expandedPreview(
   result: { content: { type: string; text?: string }[] },
@@ -366,14 +403,14 @@ function expandedPreview(
   if (content?.type === "text" && content.text) {
     const lines = content.text.split("\n");
     for (const line of lines.slice(0, PREVIEW_LINES)) {
-      text += `\n${theme.fg("dim", line)}`;
+      text += `\n${RESULT_INDENT}${theme.fg("dim", line)}`;
     }
     if (lines.length > PREVIEW_LINES) {
-      text += `\n${theme.fg("muted", `... ${lines.length - PREVIEW_LINES} more lines`)}`;
+      text += `\n${RESULT_INDENT}${theme.fg("muted", `... ${lines.length - PREVIEW_LINES} more lines`)}`;
     }
   }
   if (fullOutputPath) {
-    text += `\n${theme.fg("dim", `Full output: ${fullOutputPath}`)}`;
+    text += `\n${RESULT_INDENT}${theme.fg("dim", `Full output: ${fullOutputPath}`)}`;
   }
   return text;
 }

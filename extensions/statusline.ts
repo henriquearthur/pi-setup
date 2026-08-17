@@ -1,7 +1,12 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { truncateToWidth } from "@earendil-works/pi-tui";
+import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { basename } from "node:path";
 
 const STATUS_ID = "readable-statusline";
+
+function formatCwd(cwd: string): string {
+  return basename(cwd) || cwd;
+}
 
 function formatTokens(value: number | null | undefined): string {
   if (value == null) return "—";
@@ -14,19 +19,19 @@ function render(ctx: ExtensionContext): void {
   const theme = ctx.ui.theme;
   const model = ctx.model;
   const usage = ctx.getContextUsage();
-  const cwd = ctx.cwd.replace(/^\/Users\/[^/]+/, "~");
+  const cwd = formatCwd(ctx.cwd);
   const reasoning = ctx.thinkingLevel ?? "off";
   const percent = usage?.percent == null ? "—" : `${usage.percent.toFixed(1)}%`;
   const tokens = usage ? `${formatTokens(usage.tokens)} / ${formatTokens(usage.contextWindow)}` : "—";
 
   const parts = [
-    theme.fg("accent", cwd),
+    theme.fg("accent", `${model?.provider ?? "—"}/${model?.id ?? "—"}`),
     theme.fg("dim", "│"),
-    theme.fg("success", `◆ ${model?.provider ?? "—"}/${model?.id ?? "—"}`),
-    theme.fg("dim", "│"),
-    theme.fg("warning", `◈ ${reasoning}`),
+    theme.fg("warning", reasoning),
     theme.fg("dim", "│"),
     theme.fg("muted", `ctx: ${percent} (${tokens})`),
+    theme.fg("dim", "│"),
+    theme.fg("muted", cwd),
   ];
 
   ctx.ui.setStatus(STATUS_ID, parts.join(" "));
@@ -43,16 +48,28 @@ export default function (pi: ExtensionAPI): void {
         // Reuse the same readable statusline, but replace the built-in footer entirely.
         const model = currentContext.model;
         const usage = currentContext.getContextUsage();
-        const cwd = currentContext.cwd.replace(/^\/Users\/[^/]+/, "~");
+        const cwd = formatCwd(currentContext.cwd);
         const reasoning = currentContext.thinkingLevel ?? "off";
         const percent = usage?.percent == null ? "—" : `${usage.percent.toFixed(1)}%`;
         const tokens = usage ? `${formatTokens(usage.tokens)} / ${formatTokens(usage.contextWindow)}` : "—";
-        return [truncateToWidth([
-          theme.fg("accent", cwd), theme.fg("dim", "│"),
-          theme.fg("success", `◆ ${model?.provider ?? "—"}/${model?.id ?? "—"}`), theme.fg("dim", "│"),
-          theme.fg("warning", `◈ ${reasoning}`), theme.fg("dim", "│"),
+        const left = [
+          theme.fg("accent", `${model?.provider ?? "—"}/${model?.id ?? "—"}`),
+          theme.fg("dim", "│"),
+          theme.fg("warning", reasoning),
+          theme.fg("dim", "│"),
           theme.fg("muted", `ctx: ${percent} (${tokens})`),
-        ].join(" "), width)];
+        ].join(" ");
+        const right = theme.fg("muted", cwd);
+        const rightWithinWidth = truncateToWidth(right, width, "");
+        const leftWithinWidth = truncateToWidth(
+          left,
+          Math.max(0, width - visibleWidth(rightWithinWidth) - 1),
+          "",
+        );
+        const gap = " ".repeat(
+          Math.max(1, width - visibleWidth(leftWithinWidth) - visibleWidth(rightWithinWidth)),
+        );
+        return [truncateToWidth(leftWithinWidth + gap + rightWithinWidth, width, "")];
       },
       invalidate() {},
     }));
